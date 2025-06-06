@@ -1,0 +1,173 @@
+// Define the datasource for PostgreSQL
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Define the generator for Prisma Client
+generator client {
+  provider = "prisma-client-js"
+}
+
+// User model for all users (customers, admins, superadmins)
+model User {
+  id            Int            @id @default(autoincrement())
+  name          String
+  email         String         @unique
+  password      String
+  phone         String
+  role          Role           @default(user) // Enum for "user", "admin", "superadmin"
+  deliveryPlace String? // Only for users
+  photo         String? // Optional
+  isActive      Boolean        @default(true) // For deactivation
+  isApproved    Boolean        @default(true) // Default true for users and superadmins
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  adminTiffins  Tiffin[]       @relation("AdminTiffins")
+  enrollments   Enrollment[]
+  meals         Meal[]
+  notifications Notification[]
+  payments      Payment[]
+
+  @@index([email])
+  @@index([role])
+}
+
+// Enum for user roles
+enum Role {
+  user
+  admin
+  superadmin
+}
+
+// Tiffin model for meal plans
+model Tiffin {
+  id                  Int          @id @default(autoincrement())
+  name                String
+  description         String
+  basePrice           Float
+  superadminSurplus   Float        @default(100.0) // Fixed, superadmin-only
+  adminCharge         Float        @default(500.0) // Set by superadmin
+  totalPrice          Float // basePrice + superadminSurplus + adminCharge
+  mealFrequency       String // "one-time" or "two-time"
+  oneTimePrice        Float? // Price per one-time meal/day
+  twoTimePrice        Float? // Price per two-time meal/day
+  mealDetails         Json // { breakfast: String, lunch: String, dinner: String }
+  specialDays         Json // { days: [{ day: String, description: String }] }
+  specialDaysCount    Int
+  trialCost           Float? // Cost of trial tiffin
+  photo               String? // Tiffin photo
+  isVegetarian        Boolean      @default(true)
+  dietaryPrefs        String // Comma-separated: "vegan,gluten-free,jain"
+  deliveryTime        String? // e.g., "12:00 PM - 2:00 PM"
+  morningCancelTime   String? // e.g., "10:00 AM"
+  eveningCancelTime   String? // e.g., "5:00 PM"
+  minSubscriptionDays Int? // e.g., 7 days
+  cancelNoticePeriod  Int? // e.g., 2 days
+  maxCapacity         Int? // Max enrollments
+  adminId             Int
+  admin               User         @relation("AdminTiffins", fields: [adminId], references: [id])
+  enrollments         Enrollment[]
+  meals               Meal[]
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  isActive            Boolean      @default(true) // For tiffin deactivation
+
+  @@index([adminId])
+}
+
+// Enrollment model for user-tiffin subscriptions
+model Enrollment {
+  id          Int              @id @default(autoincrement())
+  userId      Int
+  tiffinId    Int
+  startDate   DateTime
+  endDate     DateTime? // For cancellations or deactivation
+  status      EnrollmentStatus @default(pending) // "active", "cancelled", "deactivated"
+  tiffinCount Int              @default(30) // Track remaining meals
+  user        User             @relation(fields: [userId], references: [id])
+  tiffin      Tiffin           @relation(fields: [tiffinId], references: [id])
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([userId, tiffinId])
+}
+
+// Enum for enrollment status
+enum EnrollmentStatus {
+  pending
+  active
+  cancelled
+  deactivated
+}
+
+// Meal model for daily meal updates
+model Meal {
+  id            Int            @id @default(autoincrement())
+  tiffinId      Int
+  userId        Int
+  date          DateTime
+  sabjis        String? // e.g., "Paneer Butter Masala"
+  roti          String? // e.g., "4 Tandoori Roti"
+  chawal        String? // e.g., "Jeera Rice"
+  sweet         String? // e.g., "Gulab Jamun"
+  mealType      String // "morning" or "evening"
+  status        MealStatus     @default(pending) // "pending", "accepted", "rejected"
+  tiffin        Tiffin         @relation(fields: [tiffinId], references: [id])
+  user          User           @relation(fields: [userId], references: [id])
+  notifications Notification[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([tiffinId, userId, date])
+}
+
+// Enum for meal status
+enum MealStatus {
+  pending
+  accepted
+  rejected
+}
+
+// Notification model for user alerts
+model Notification {
+  id        Int                @id @default(autoincrement())
+  userId    Int
+  mealId    Int? // Nullable for non-meal notifications
+  message   String
+  status    NotificationStatus @default(sent) // "sent", "read"
+  user      User               @relation(fields: [userId], references: [id])
+  meal      Meal?              @relation(fields: [mealId], references: [id])
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  @@index([userId, mealId])
+}
+
+// Enum for notification status
+enum NotificationStatus {
+  sent
+  read
+}
+
+// Payment model for admin payments
+model Payment {
+  id          Int           @id @default(autoincrement())
+  adminId     Int
+  amount      Float // (enrolled tiffins × superadminSurplus) + adminCharge
+  adminCharge Float // Set by superadmin
+  month       DateTime // e.g., "2025-05-01"
+  status      PaymentStatus @default(pending) // "pending", "approved", "rejected"
+  admin       User          @relation(fields: [adminId], references: [id])
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([adminId, month])
+}
+
+// Enum for payment status
+enum PaymentStatus {
+  pending
+  approved
+  rejected
+}
