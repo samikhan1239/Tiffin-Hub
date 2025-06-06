@@ -22,11 +22,10 @@ export async function GET(req) {
     }
 
     const { searchParams } = new URL(req.url);
-    const userId = searchParams.get("userId");
     const tiffinId = searchParams.get("tiffinId");
     const mealType = searchParams.get("mealType");
 
-    console.log("Meal history query params:", { userId, tiffinId, mealType });
+    console.log("Meal stats query params:", { tiffinId, mealType });
 
     if (!tiffinId) {
       return new Response(JSON.stringify({ error: "Missing tiffinId" }), {
@@ -45,35 +44,27 @@ export async function GET(req) {
 
     const whereClause = {
       tiffinId: tiffinIdNum,
-      tiffin: { adminId: decoded.id }, // Ensure admin owns the tiffin
+      tiffin: { adminId: decoded.id },
     };
-
-    if (userId && userId !== "all") {
-      const userIdNum = parseInt(userId);
-      if (isNaN(userIdNum)) {
-        return new Response(JSON.stringify({ error: "Invalid userId" }), {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
-      whereClause.userId = userIdNum;
-    }
 
     if (mealType && mealType !== "all") {
       whereClause.mealType = mealType;
     }
 
-    const meals = await prisma.meal.findMany({
+    const stats = await prisma.meal.groupBy({
+      by: ["status"],
       where: whereClause,
-      include: {
-        tiffin: { select: { name: true } },
-        user: { select: { name: true } },
-      },
-      orderBy: { date: "desc" },
+      _count: { status: true },
     });
 
-    console.log(`Fetched ${meals.length} meals for tiffinId: ${tiffinId}`);
-    return new Response(JSON.stringify(meals), {
+    const result = { accepted: 0, rejected: 0 };
+    stats.forEach((stat) => {
+      if (stat.status === "accepted") result.accepted = stat._count.status;
+      if (stat.status === "rejected") result.rejected = stat._count.status;
+    });
+
+    console.log("Meal stats:", result);
+    return new Response(JSON.stringify(result), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
@@ -92,9 +83,9 @@ export async function GET(req) {
         headers: { "Content-Type": "application/json" },
       });
     }
-    console.error("Fetch meal history error:", error.message, error.stack);
+    console.error("Fetch meal stats error:", error.message, error.stack);
     return new Response(
-      JSON.stringify({ error: "Failed to fetch meal history" }),
+      JSON.stringify({ error: "Failed to fetch meal stats" }),
       {
         status: 500,
         headers: { "Content-Type": "application/json" },

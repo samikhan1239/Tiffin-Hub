@@ -4,6 +4,13 @@
 
 body {
   @apply text-white;
+  padding-left: 0;
+}
+
+@media (min-width: 768px) {
+  body {
+    padding-left: 16rem; /* 64 width (w-64 = 16rem) to make space for sidebar */
+  }
 }
 
 input,

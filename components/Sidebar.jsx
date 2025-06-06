@@ -11,6 +11,7 @@ import {
   Menu,
   X,
   User,
+  Clock, // For Meal History
 } from "lucide-react";
 
 export default function Sidebar({ navItems = [], isOpen, setIsOpen }) {
@@ -29,15 +30,15 @@ export default function Sidebar({ navItems = [], isOpen, setIsOpen }) {
     Users: User,
     Profile: User,
     Settings: Settings,
+    "Meal History": Clock,
   };
 
   useEffect(() => {
     const storedRole = localStorage.getItem("role");
-    setRole(storedRole);
+    setRole(storedRole || null);
     setIsLoading(false);
   }, []);
 
-  // Close on outside click
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (
@@ -48,20 +49,21 @@ export default function Sidebar({ navItems = [], isOpen, setIsOpen }) {
         setIsOpen(false);
       }
     };
-
-    if (isOpen) document.addEventListener("mousedown", handleClickOutside);
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen, setIsOpen]);
 
-  // Close on Escape
   useEffect(() => {
     const handleEscape = (event) => {
       if (event.key === "Escape") {
         setIsOpen(false);
       }
     };
-
-    if (isOpen) document.addEventListener("keydown", handleEscape);
+    if (isOpen) {
+      document.addEventListener("keydown", handleEscape);
+    }
     return () => document.removeEventListener("keydown", handleEscape);
   }, [isOpen, setIsOpen]);
 
@@ -72,12 +74,14 @@ export default function Sidebar({ navItems = [], isOpen, setIsOpen }) {
     admin: [
       { href: "/dashboard/admin", label: "Dashboard" },
       { href: "/dashboard/admin/tiffins", label: "Manage Tiffins" },
+      { href: "/dashboard/admin/meal-history", label: "Meal History" },
       { href: "/dashboard/admin/payments", label: "Payments" },
       { href: "/dashboard/admin/profile", label: "Profile" },
     ],
     user: [
       { href: "/dashboard/user", label: "Dashboard" },
       { href: "/dashboard/user/enrollments", label: "Enrolments" },
+      { href: "/dashboard/user/meal-history", label: "Meal History" },
       { href: "/dashboard/user/notifications", label: "Notifications" },
       { href: "/dashboard/user/profile", label: "Profile" },
     ],
@@ -94,7 +98,7 @@ export default function Sidebar({ navItems = [], isOpen, setIsOpen }) {
   if (isLoading) {
     return (
       <button
-        className="sidebar-toggle fixed top-4 left-4 z-50 bg-gradient-to-r from-blue-600 to-cyan-600 text-white p-3 rounded-xl hover:from-blue-700 hover:to-cyan-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+        className="sidebar-toggle fixed top-4 left-4 z-[100] bg-gradient-to-r from-blue-600 to-cyan-600 text-white p-3 rounded-xl hover:from-blue-700 hover:to-cyan-700 transition-all duration-200 shadow-lg hover:shadow-xl"
         onClick={toggleSidebar}
         aria-label="Open sidebar"
       >
@@ -108,41 +112,46 @@ export default function Sidebar({ navItems = [], isOpen, setIsOpen }) {
 
   return (
     <>
+      {/* Toggle Button - Always Visible */}
       <button
-        className="sidebar-toggle fixed top-4 left-4 z-50 bg-gradient-to-r from-blue-600 to-cyan-600 text-white p-2 rounded-lg hover:from-blue-700 hover:to-cyan-700 transition-colors"
+        className="sidebar-toggle fixed top-4 left-4 z-[100] bg-gradient-to-r from-blue-600 to-cyan-600 text-white p-2 rounded-lg hover:from-blue-700 hover:to-cyan-700 transition-colors"
         onClick={toggleSidebar}
         aria-label={isOpen ? "Close sidebar" : "Open sidebar"}
       >
         {isOpen ? <X size={20} /> : <Menu size={20} />}
       </button>
 
+      {/* Overlay */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-70 z-40 transition-opacity"
+          className="fixed inset-0 bg-black bg-opacity-70 z-40 md:hidden"
           onClick={closeSidebar}
           aria-hidden="true"
         />
       )}
 
+      {/* Sidebar */}
       <aside
         ref={sidebarRef}
-        className={`fixed left-0 top-0 h-screen w-64 bg-slate-900/95 backdrop-blur-sm z-50 transform transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 left-0 h-screen w-64 bg-slate-900/95 backdrop-blur-sm z-50 pt-16 transition-transform duration-300 ease-in-out ${
           isOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        } md:translate-x-0`}
         aria-label="Sidebar navigation"
       >
-        <div className="flex items-center justify-between p-4 border-b border-slate-700">
+        {/* Sidebar Header */}
+        <div className="absolute top-0 left-0 w-full h-16 flex items-center justify-between px-4 border-b border-slate-700 bg-slate-900/95 z-10">
           <h2 className="text-xl font-bold text-white">TiffinHub</h2>
           <button
             onClick={closeSidebar}
-            className="text-gray-400 hover:text-white transition-colors p-2"
+            className="text-gray-400 hover:text-white transition-colors p-2 md:hidden"
             aria-label="Close sidebar"
           >
             <X size={20} />
           </button>
         </div>
 
-        <nav className="p-4 space-y-1">
+        {/* Sidebar Links */}
+        <nav className="p-4 mt-2 space-y-1">
           {activeNavItems.length === 0 ? (
             <div className="text-red-400 py-2 px-3">
               {role

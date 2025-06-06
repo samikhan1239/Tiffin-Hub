@@ -56,8 +56,21 @@ export async function POST(req) {
 
     const enrollments = await prisma.enrollment.findMany({
       where: { tiffinId: parseInt(tiffinId), status: "active" },
-      include: { user: { select: { id: true, email: true } } },
+      include: { user: { select: { id: true, email: true, name: true } } },
     });
+
+    if (enrollments.length === 0) {
+      console.warn(`No active enrollments found for tiffinId: ${tiffinId}`);
+      return new Response(
+        JSON.stringify({
+          error: "No active enrollments found for this tiffin",
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
 
     const updates = await Promise.all(
       enrollments.map(async (enrollment) => {
@@ -75,15 +88,33 @@ export async function POST(req) {
           },
         });
 
-        // Send email notification
-        await sendMealUpdateEmail(
-          enrollment.user.email,
-          `${tiffin.name} Meal Update for ${new Date(
-            date
-          ).toLocaleDateString()} (${mealType}): Sabjis: ${sabjis}, Roti: ${roti}, Chawal: ${chawal}${
-            sweet ? `, Sweet: ${sweet}` : ""
-          }`
-        );
+        // Send email notification only if user has a valid email
+        if (enrollment.user.email) {
+          try {
+            await sendMealUpdateEmail(
+              enrollment.user.email,
+              `${tiffin.name} Meal Update for ${new Date(
+                date
+              ).toLocaleDateString()} (${mealType}): Sabjis: ${sabjis}, Roti: ${roti}, Chawal: ${chawal}${
+                sweet ? `, Sweet: ${sweet}` : ""
+              }`
+            );
+          } catch (emailError) {
+            console.error(
+              `Failed to send email to ${enrollment.user.email} (userId: ${
+                enrollment.userId
+              }, name: ${enrollment.user.name || "Unknown"}):`,
+              emailError.message
+            );
+            // Continue processing other updates even if email fails
+          }
+        } else {
+          console.warn(
+            `No email address for userId: ${enrollment.userId}, name: ${
+              enrollment.user.name || "Unknown"
+            }`
+          );
+        }
 
         // Emit WebSocket event
         global.io?.emit("mealUpdate", {

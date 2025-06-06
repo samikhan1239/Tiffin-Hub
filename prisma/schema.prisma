@@ -152,15 +152,16 @@ enum NotificationStatus {
 
 // Payment model for admin payments
 model Payment {
-  id          Int           @id @default(autoincrement())
-  adminId     Int
-  amount      Float // (enrolled tiffins × superadminSurplus) + adminCharge
-  adminCharge Float // Set by superadmin
-  month       DateTime // e.g., "2025-05-01"
-  status      PaymentStatus @default(pending) // "pending", "approved", "rejected"
-  admin       User          @relation(fields: [adminId], references: [id])
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  id                Int           @id @default(autoincrement())
+  adminId           Int
+  amount            Float
+  adminCharge       Float
+  superadminSurplus Float         @default(100.0) // Added to match Tiffin model
+  month             DateTime
+  status            PaymentStatus @default(pending)
+  admin             User          @relation(fields: [adminId], references: [id])
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
 
   @@index([adminId, month])
 }

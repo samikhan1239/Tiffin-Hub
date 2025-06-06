@@ -33,13 +33,29 @@ export default function MealUpdates() {
   useEffect(() => {
     const fetchTiffins = async () => {
       try {
+        const token = localStorage.getItem("token");
+        console.log(
+          "Fetching tiffins with token:",
+          token ? "Present" : "Missing"
+        );
         const res = await axios.get("/api/admin/tiffins", {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+          headers: { Authorization: `Bearer ${token}` },
         });
+        console.log("Tiffins response:", res.data);
         setTiffins(res.data);
-        if (res.data.length > 0) setSelectedTiffin(res.data[0].id);
-        setError("");
+        if (res.data.length > 0) {
+          const firstTiffinId = String(res.data[0].id); // Convert to string
+          console.log("Setting selectedTiffin to:", firstTiffinId);
+          setSelectedTiffin(firstTiffinId);
+        } else {
+          console.warn("No tiffins available");
+          setError("No tiffins available. Please create a tiffin first.");
+        }
       } catch (err) {
+        console.error(
+          "Fetch tiffins error:",
+          err.response?.data || err.message
+        );
         if (err.response?.status === 401) {
           localStorage.removeItem("token");
           localStorage.removeItem("role");
@@ -59,10 +75,15 @@ export default function MealUpdates() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!selectedTiffin) {
+      setError("Please select a tiffin");
+      return;
+    }
     try {
+      console.log("Submitting meal update for tiffinId:", selectedTiffin);
       await axios.post(
         "/api/meal-updates",
-        { tiffinId: parseInt(selectedTiffin), mealDetails },
+        { tiffinId: parseInt(selectedTiffin), mealDetails }, // Convert back to number for API
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         }
@@ -78,6 +99,10 @@ export default function MealUpdates() {
       setSuccess("Meal update sent successfully");
       setError("");
     } catch (err) {
+      console.error(
+        "Submit meal update error:",
+        err.response?.data || err.message
+      );
       if (err.response?.status === 401) {
         localStorage.removeItem("token");
         localStorage.removeItem("role");
@@ -98,16 +123,28 @@ export default function MealUpdates() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <Label className="text-blue-300">Select Tiffin</Label>
-              <Select value={selectedTiffin} onValueChange={setSelectedTiffin}>
+              <Select
+                value={selectedTiffin}
+                onValueChange={(value) => {
+                  console.log("Selected tiffin:", value);
+                  setSelectedTiffin(value);
+                }}
+              >
                 <SelectTrigger className="w-[200px] bg-slate-800 text-white border-blue-500/30">
                   <SelectValue placeholder="Select tiffin" />
                 </SelectTrigger>
                 <SelectContent>
-                  {tiffins.map((tiffin) => (
-                    <SelectItem key={tiffin.id} value={tiffin.id}>
-                      {tiffin.name}
+                  {tiffins.length === 0 ? (
+                    <SelectItem value="none" disabled>
+                      No tiffins available
                     </SelectItem>
-                  ))}
+                  ) : (
+                    tiffins.map((tiffin) => (
+                      <SelectItem key={tiffin.id} value={String(tiffin.id)}>
+                        {tiffin.name}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -185,6 +222,7 @@ export default function MealUpdates() {
             <Button
               type="submit"
               className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white"
+              disabled={!selectedTiffin}
             >
               Send Update
             </Button>

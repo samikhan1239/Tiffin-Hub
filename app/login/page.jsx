@@ -18,9 +18,22 @@ export default function Login() {
     e.preventDefault();
     try {
       const res = await axios.post("/api/auth/login", form);
-      localStorage.setItem("token", res.data.token);
-      localStorage.setItem("role", res.data.user.role);
-      router.push("/dashboard");
+      const token = res.data.token;
+      const role = res.data.user.role;
+
+      localStorage.setItem("token", token);
+      localStorage.setItem("role", role);
+
+      // Redirect based on role
+      if (role === "admin") {
+        router.push("/dashboard/admin");
+      } else if (role === "user") {
+        router.push("/dashboard/user");
+      } else if (role === "superadmin") {
+        router.push("/dashboard/superadmin");
+      } else {
+        router.push("/dashboard"); // fallback
+      }
     } catch (err) {
       setError(err.response?.data?.error || "Login failed");
     }

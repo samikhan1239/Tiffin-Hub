@@ -178,7 +178,7 @@ export async function PATCH(req, { params }) {
     await prisma.notification.create({
       data: {
         userId: updatedEnrollment.userId,
-        dailyUpdateId: null, // No specific daily update
+        mealId: null, // No specific daily update
         message: `Your enrollment for ${enrollment.tiffin.name} has been ${status}.`,
         status: "sent",
       },

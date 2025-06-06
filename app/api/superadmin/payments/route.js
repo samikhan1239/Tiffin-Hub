@@ -47,19 +47,35 @@ export async function PATCH(req) {
         status: 403,
       });
 
-    const { paymentId, status, adminCharge } = await req.json();
+    const { paymentId, status, adminCharge, superadminSurplus } =
+      await req.json();
     if (!paymentId || !status)
       return new Response(
         JSON.stringify({ error: "Missing required fields" }),
         { status: 400 }
       );
 
+    const updateData = { status };
+    if (adminCharge !== undefined)
+      updateData.adminCharge = parseFloat(adminCharge);
+    if (superadminSurplus !== undefined) {
+      updateData.superadminSurplus = parseFloat(superadminSurplus);
+
+      // Update superadminSurplus in related Tiffins
+      const payment = await prisma.payment.findUnique({
+        where: { id: parseInt(paymentId) },
+        select: { adminId: true },
+      });
+
+      await prisma.tiffin.updateMany({
+        where: { adminId: payment.adminId },
+        data: { superadminSurplus: parseFloat(superadminSurplus) },
+      });
+    }
+
     const payment = await prisma.payment.update({
       where: { id: parseInt(paymentId) },
-      data: {
-        status,
-        adminCharge: adminCharge ? parseFloat(adminCharge) : undefined,
-      },
+      data: updateData,
     });
 
     if (status === "rejected") {
