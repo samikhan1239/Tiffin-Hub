@@ -11,10 +11,10 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-cyan-900 relative ">
+      <body className="min-h-screen w-full max-w-full bg-gradient-to-br from-slate-900 via-blue-900 to-cyan-900 relative overflow-x-hidden mx-0">
         <FloatingShapesBackground />
         <Header />
-        <main className="relative z-10">{children}</main>
+        <main className="relative">{children}</main>
         <Footer />
       </body>
     </html>

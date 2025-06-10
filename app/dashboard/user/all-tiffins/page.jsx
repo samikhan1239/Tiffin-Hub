@@ -4,6 +4,7 @@ import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function UserDashboard() {
   const [tiffins, setTiffins] = useState([]);
@@ -44,10 +45,12 @@ export default function UserDashboard() {
               </CardHeader>
               <CardContent>
                 {tiffin.photo && (
-                  <img
+                  <Image
                     src={tiffin.photo}
                     alt={tiffin.name}
-                    className="w-full h-40 object-cover rounded mb-4"
+                    width={400} // Adjust width based on layout needs
+                    height={160} // Equivalent to h-40 (40 * 4 = 160px)
+                    className="w-full object-cover rounded mb-4"
                   />
                 )}
                 <p className="text-blue-300 mb-2">{tiffin.description}</p>

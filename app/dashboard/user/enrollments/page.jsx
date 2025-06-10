@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,7 @@ export default function Enrollments() {
   });
   const router = useRouter();
 
-  const fetchEnrollments = async () => {
+  const fetchEnrollments = useCallback(async () => {
     try {
       const res = await axios.get("/api/user/enrollments", {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -32,11 +32,11 @@ export default function Enrollments() {
         setError(err.response?.data?.error || "Failed to fetch enrollments");
       }
     }
-  };
+  }, [router]);
 
   useEffect(() => {
     fetchEnrollments();
-  }, [router]);
+  }, [fetchEnrollments]);
 
   const handleCancel = async (e) => {
     e.preventDefault();
@@ -51,6 +51,8 @@ export default function Enrollments() {
       setCancelForm({ enrollmentId: null, date: "" });
       setError("");
       setSuccess("Cancellation successful");
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccess(""), 3000);
       await fetchEnrollments(); // Refresh enrollments
     } catch (err) {
       if (err.response?.status === 401) {
@@ -65,8 +67,16 @@ export default function Enrollments() {
   return (
     <div className="container mx-auto px-6 py-6 relative z-10">
       <h1 className="text-3xl font-bold text-white mb-6">My Enrollments</h1>
-      {error && <p className="text-red-400 mb-4">{error}</p>}
-      {success && <p className="text-green-400 mb-4">{success}</p>}
+      {error && (
+        <div className="bg-red-500/20 border border-red-500 text-red-400 p-4 rounded mb-4">
+          {error}
+        </div>
+      )}
+      {success && (
+        <div className="bg-green-500/20 border border-green-500 text-green-400 p-4 rounded mb-4">
+          {success}
+        </div>
+      )}
       <div className="space-y-4">
         {enrollments.map((enrollment) => (
           <Card

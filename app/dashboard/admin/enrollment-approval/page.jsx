@@ -1,7 +1,7 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import clsx from "clsx";
@@ -9,36 +9,40 @@ import clsx from "clsx";
 export default function EnrollmentApproval() {
   const [enrollments, setEnrollments] = useState([]);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("pending");
   const router = useRouter();
 
-  const fetchEnrollments = async (status) => {
-    setLoading(true);
-    setError("");
-    try {
-      const res = await axios.get(`/api/admin/enrollments?status=${status}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
-      setEnrollments(res.data);
-    } catch (err) {
-      console.error("Fetch enrollments error:", err);
-      setError(err.response?.data?.error || "Failed to fetch enrollments");
-      if (err.response?.status === 401) {
-        localStorage.removeItem("token");
-        localStorage.removeItem("role");
-        router.push("/login?error=Session expired, please log in again");
+  const fetchEnrollments = useCallback(
+    async (status) => {
+      setLoading(true);
+      setError("");
+      try {
+        const res = await axios.get(`/api/admin/enrollments?status=${status}`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
+        setEnrollments(res.data);
+      } catch (err) {
+        console.error("Fetch enrollments error:", err);
+        setError(err.response?.data?.error || "Failed to fetch enrollments");
+        if (err.response?.status === 401) {
+          localStorage.removeItem("token");
+          localStorage.removeItem("role");
+          router.push("/login?error=Session expired, please log in again");
+        }
+      } finally {
+        setLoading(false);
       }
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+    [router]
+  );
 
   useEffect(() => {
     fetchEnrollments(statusFilter);
-  }, [statusFilter]);
+  }, [fetchEnrollments, statusFilter]);
 
   const handleAction = async (id, status) => {
     try {
@@ -51,13 +55,23 @@ export default function EnrollmentApproval() {
           },
         }
       );
-      // Refresh the list after update
-      fetchEnrollments(statusFilter);
+      setSuccess(
+        status === "active"
+          ? "Enrollment approved successfully"
+          : "Enrollment rejected successfully"
+      );
+      setTimeout(() => setSuccess(""), 3000); // Clear success message after 3 seconds
+      fetchEnrollments(statusFilter); // Refresh the list
     } catch (err) {
       console.error("Update enrollment error:", err);
       setError(
         err.response?.data?.error || "Failed to update enrollment status"
       );
+      if (err.response?.status === 401) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("role");
+        router.push("/login?error=Session expired, please log in again");
+      }
     }
   };
 
@@ -68,7 +82,16 @@ export default function EnrollmentApproval() {
       <h1 className="text-3xl font-bold text-white mb-4">
         Enrollment Approval
       </h1>
-
+      {error && (
+        <div className="bg-red-500/20 border border-red-500 text-red-400 p-4 rounded mb-4">
+          {error}
+        </div>
+      )}
+      {success && (
+        <div className="bg-green-500/20 border border-green-500 text-green-400 p-4 rounded mb-4">
+          {success}
+        </div>
+      )}
       {/* Status Tabs */}
       <div className="flex space-x-4 mb-6">
         {statuses.map((status) => (
@@ -86,17 +109,14 @@ export default function EnrollmentApproval() {
           </button>
         ))}
       </div>
-
       {loading && <div className="text-blue-300">Loading...</div>}
-      {error && <div className="text-red-400">{error}</div>}
-
       {!loading && enrollments.length === 0 ? (
         <p className="text-blue-300">No {statusFilter} enrollments.</p>
       ) : (
         <div className="space-y-4">
           {enrollments.map((enrollment) => (
             <Card
-              key={enrollment.id}
+              key={enникrollment.id}
               className="bg-slate-900/40 border border-blue-500/20 backdrop-blur-sm"
             >
               <CardContent className="p-6 flex justify-between items-center">
@@ -113,7 +133,6 @@ export default function EnrollmentApproval() {
                   </p>
                   <p className="text-blue-300">Status: {enrollment.status}</p>
                 </div>
-
                 {enrollment.status === "pending" ? (
                   <div className="flex space-x-4">
                     <Button

@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import axios from "axios";
+import Image from "next/image";
 
 export default function AddTiffin() {
   const [form, setForm] = useState({
@@ -376,10 +377,12 @@ export default function AddTiffin() {
                 className="bg-slate-800 text-white border-blue-500/30"
               />
               {preview && (
-                <img
+                <Image
                   src={preview}
                   alt="Tiffin Preview"
                   className="mt-2 max-w-xs rounded"
+                  width={400} // You can adjust this
+                  height={300} // You can adjust this
                 />
               )}
               {uploadStatus === "uploading" && (
